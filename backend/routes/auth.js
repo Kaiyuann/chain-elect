@@ -63,7 +63,7 @@ router.post("/register", async (req, res) => {
 
     const sql = `INSERT INTO user (username, email, password) VALUES (?,?,?)`;
 
-    db.query(sql, [user, email, password], (err, result) => {
+    db.query(sql, [username, email, password], (err, result) => {
         if (err) {
             console.error("Register error:", err);
             return res.status(500).json({ message: "User registration failed." });

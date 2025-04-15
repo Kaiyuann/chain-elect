@@ -61,9 +61,9 @@ router.post("/register", async (req, res) => {
         return res.status(400).json({ message: "All fields are required." });
     }
 
-    const sql = `INSERT INTO user (username, email, password) VALUES ('${username}', '${email}', '${password}')`;
+    const sql = `INSERT INTO user (username, email, password) VALUES (?,?,?)`;
 
-    db.query(sql, (err, result) => {
+    db.query(sql, [user, email, password], (err, result) => {
         if (err) {
             console.error("Register error:", err);
             return res.status(500).json({ message: "User registration failed." });
@@ -112,9 +112,9 @@ router.get("/profile", (req, res) => {
         return res.status(401).json({ message: "Not logged in" });
     }
 
-    const sql = `SELECT * FROM user WHERE id = ${userId}`;
+    const sql = `SELECT * FROM user WHERE id = ?`;
 
-    db.query(sql, (err, results) => {
+    db.query(sql, [userId], (err, results) => {
         if (err) {
             console.error("Profile error:", err);
             return res.status(500).json({ message: "Error fetching profile" });

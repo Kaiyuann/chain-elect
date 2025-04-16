@@ -53,6 +53,12 @@ const loginLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+router.get("/me", (req, res) => {
+    const sessionId = req.cookies.session_id;
+    if (!sessionId) return res.status(401).json({ loggedIn: false });
+
+    res.json({ loggedIn: true });
+});
 
 router.post("/register", async (req, res) => {
     const { username, email, password } = req.body;

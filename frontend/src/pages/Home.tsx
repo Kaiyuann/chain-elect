@@ -1,56 +1,125 @@
-import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import CreatePollModal from "../components/CreatePollModal";
 
-interface User {
-    username: string;
-
+interface Poll {
+    id: number;
+    title: string;
+    description: string;
+    creator_id: number;
+    startTime: string;
+    endTime: string;
+    status: string;
 }
 
 function Home() {
+    const [polls, setPolls] = useState<Poll[]>([]);
+    const [search, setSearch] = useState("");
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
     const navigate = useNavigate();
-    const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
-        axios
-            .get("http://localhost:5000/api/profile", { withCredentials: true })
-            .then((res) => setUser(res.data))
-            .catch(() => setUser(null));
+        axios.get("http://localhost:5000/api/me", { withCredentials: true })
+            .then(res => setIsLoggedIn(true))
+            .catch(err => setIsLoggedIn(false));
     }, []);
 
-    return (
-        <>
-            {
-                user ?
-                    <div className="position-absolute start-50 top-50 translate-middle text-center">
-                        <h2 className="mb-3">Welcome back, {user.username}!</h2>
-                        <p className="mb-3">We'll email you when the site is ready, check out the trailer here ⬇️</p>
-                        <iframe
-                            width="560"
-                            height="315"
-                            src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                            title="Welcome Video"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            style={{ borderRadius: "8px" }}
-                        ></iframe>
-                    </div>
-                    :
-                    <div className="position-absolute start-50 top-50 translate-middle">
-                        <h1>Welcome!</h1>
-                        <p className="mb-6">Please log in or register to continue.</p>
+    useEffect(() => {
+        axios.get("http://localhost:5000/api/polls", {
+            withCredentials: true
+        })
+            .then(res => setPolls(res.data))
+            .catch(err => console.error("Failed to fetch polls:", err));
+    }, []);
 
-                        <button className="btn btn-primary me-4" onClick={() => navigate("/login")}>
-                            Login
-                        </button>
-
-                        <button className="btn btn-secondary" onClick={() => navigate("/register")}>
-                            Register
-                        </button>
-                    </div>
-            }
-        </>
+    const filteredPolls = polls.filter(poll =>
+        poll.title.toLowerCase().includes(search.toLowerCase())
     );
-}
+
+    const getTimeRemaining = (endTime: string) => {
+        const timeDiff = new Date(endTime).getTime() - Date.now();
+        if (timeDiff <= 0) return "Closed";
+
+        const mins = Math.floor(timeDiff / 1000 / 60) % 60;
+        const hrs = Math.floor(timeDiff / 1000 / 60 / 60) % 24;
+        const days = Math.floor(timeDiff / 1000 / 60 / 60 / 24);
+
+        return `${days}d ${hrs}h ${mins}m left`;
+    };
+
+    return (
+
+        <div className="container py-4">
+            {isLoggedIn === null && (
+                <div className="text-center mt-5">
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            )}
+
+            {isLoggedIn === false && (
+                <div className="position-absolute start-50 top-50 translate-middle text-center">
+                    <h1>Welcome!</h1>
+                    <p className="mb-4">Please log in or register to continue.</p>
+                    <button className="btn btn-primary me-3" onClick={() => navigate("/login")}>
+                        Login
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => navigate("/register")}>
+                        Register
+                    </button>
+                </div>
+            )}
+
+            {isLoggedIn === true && (
+                <>
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                        <input
+                            type="text"
+                            className="form-control w-50"
+                            placeholder="Search polls..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                        <CreatePollModal />
+                    </div>
+
+                    <div className="row g-4">
+                        {filteredPolls.map((poll) => (
+                            <div
+                                key={poll.id}
+                                className="col-12 col-md-6 col-lg-4"
+                            >
+                                <div
+                                    className="card h-100 shadow-sm border-0"
+                                    role="button"
+                                    onClick={() => navigate(`/poll/${poll.id}`)}
+                                >
+                                    <div className="card-body">
+                                        <div className="d-flex justify-content-between align-items-center mb-2">
+                                            <h5 className="card-title mb-0">{poll.title}</h5>
+                                            <span className={`badge ${poll.status === "open" ? "bg-success" : "bg-danger"}`}>
+                                                {poll.status.toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <p className="card-text text-muted small">
+                                            {getTimeRemaining(poll.endTime)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        {filteredPolls.length === 0 && (
+                            <p className="text-muted text-center">No polls found.</p>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+
+    );
+};
 
 export default Home;

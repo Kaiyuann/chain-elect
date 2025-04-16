@@ -15,7 +15,9 @@ app.use(express.json());
 app.use(cookieParser());
 
 const authRoutes = require("./routes/auth");
+const pollRoutes = require("./routes/poll");
 app.use("/api", authRoutes);
+app.use("/api/polls", pollRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.listen(PORT, () => {

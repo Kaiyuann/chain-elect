@@ -6,6 +6,23 @@ function CreatePollModal() {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [endTime, setEndTime] = useState("");
+    const [options, setOptions] = useState<string[]>([""]);
+
+
+    const handleOptionChange = (index: number, value: string) => {
+        const updated = [...options];
+        updated[index] = value;
+        setOptions(updated);
+    };
+
+    const addOption = () => {
+        setOptions([...options, ""]);
+    };
+
+    const removeOption = (index: number) => {
+        const updated = options.filter((_, i) => i !== index);
+        setOptions(updated);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -15,6 +32,7 @@ function CreatePollModal() {
                 title,
                 description,
                 endTime,
+                options
             }, {
                 withCredentials: true
             });
@@ -80,6 +98,37 @@ function CreatePollModal() {
                                             onChange={(e) => setEndTime(e.target.value)}
                                             required
                                         />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label">Vote Options</label>
+                                        {options.map((option, index) => (
+                                            <div key={index} className="input-group mb-2">
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    placeholder={`Option ${index + 1}`}
+                                                    value={option}
+                                                    onChange={(e) => handleOptionChange(index, e.target.value)}
+                                                    required
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-danger"
+                                                    onClick={() => removeOption(index)}
+                                                    disabled={options.length <= 1}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary btn-sm"
+                                            onClick={addOption}
+                                        >
+                                            + Add Option
+                                        </button>
                                     </div>
                                 </div>
 

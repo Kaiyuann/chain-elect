@@ -52,4 +52,35 @@ router.post("/", (req, res) => {
     });
 });
 
+
+router.get("/:id", (req, res) => {
+    const pollId = req.params.id;
+
+    const sqlPoll = `
+    SELECT p.id, p.title, p.description, p.creator_id, u.username AS creator_name,
+           p.startTime, p.endTime, p.status
+    FROM poll p
+    JOIN user u ON p.creator_id = u.id
+    WHERE p.id = ?
+  `;
+    const sqlOptions = "SELECT id, label FROM poll_options WHERE poll_id = ?";
+
+    db.query(sqlPoll, [pollId], (err, pollResults) => {
+        if (err || pollResults.length === 0) {
+            return res.status(404).json({ message: "Poll not found" });
+        }
+
+        const poll = pollResults[0];
+
+        db.query(sqlOptions, [pollId], (err2, optionResults) => {
+            if (err2) {
+                return res.status(500).json({ message: "Failed to fetch options" });
+            }
+
+            poll.options = optionResults;
+            res.json(poll);
+        });
+    });
+});
+
 module.exports = router;

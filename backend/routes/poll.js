@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const mysql = require("mysql2");
+const crypto = require("crypto");
 
 const db = mysql.createConnection({
     host: process.env.DB_HOST,
@@ -8,6 +9,18 @@ const db = mysql.createConnection({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME
 });
+
+
+function generateTokens(pollId, count = 100) {
+    const tokens = [];
+
+    for (let i = 0; i < count; i++) {
+        const rawToken = crypto.randomBytes(16).toString("hex"); // 32-character token
+        tokens.push([pollId, rawToken]);
+    }
+
+    return tokens;
+}
 
 
 router.get("/", (req, res) => {
@@ -30,10 +43,10 @@ router.get("/", (req, res) => {
 router.post("/", (req, res) => {
     const { title, description, endTime, options } = req.body;
 
-    const insertpollsql = "INSERT INTO poll (title, description, endTime, creator_id) VALUES (?, ?, ?, ?)";
+    const insertPollSql = "INSERT INTO poll (title, description, endTime, creator_id) VALUES (?, ?, ?, ?)";
     const values = [title, description, endTime, req.cookies.session_id || 1];
 
-    db.query(insertpollsql, values, (err, result) => {
+    db.query(insertPollSql, values, (err, result) => {
         if (err) {
             console.error("Failed to create poll:", err);
             return res.status(500).json({ message: "Poll creation failed" });
@@ -47,7 +60,20 @@ router.post("/", (req, res) => {
                 return res.status(500).json({ message: "Poll created, but options failed" });
             }
 
-            res.status(201).json({ message: "Poll and options created successfully" });
+            const tokens = generateTokens(pollId, 100); // 100 tokens per poll
+
+            const tokenSql = "INSERT INTO poll_token (poll_id, token) VALUES ?";
+            db.query(tokenSql, [tokens], (err3) => {
+                if (err3) {
+                    console.error("Failed to insert poll tokens:", err3);
+                    return res.status(500).json({ message: "Poll and options created, but token generation failed" });
+                }
+
+                res.status(201).json({
+                    message: "Poll, options, and tokens created successfully",
+                    pollId: pollId
+                });
+            });
         });
     });
 });

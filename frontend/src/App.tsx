@@ -4,6 +4,7 @@ import Register from "./pages/Register";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import PollDetailPage from "./pages/PollDetailPage";
+import VotePage from "./pages/VotePage"
 import Admin from "./pages/Admin";
 import Layout from "./components/Layout";
 
@@ -18,6 +19,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/poll/:id" element={<PollDetailPage />} />
+          <Route path="/poll/:id/vote" element={<VotePage />} />
           <Route path="/admin" element={<Admin />} />
         </Route>
       </Routes>

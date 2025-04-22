@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -25,6 +25,15 @@ function PollDetailPage() {
             .then(res => setPoll(res.data))
             .catch(err => console.error("Failed to fetch poll:", err));
     }, [id]);
+
+    const navigate = useNavigate();
+    const isOpen = poll != null && poll.status === "open";
+
+    const handleVoteClick = () => {
+        if (isOpen) {
+            navigate(`/poll/${poll.id}/vote`);
+        }
+    };
 
     if (!poll) return <p className="text-center mt-5">Loading poll...</p>;
 
@@ -65,6 +74,24 @@ function PollDetailPage() {
                         <li key={opt.id} className="list-group-item">{opt.label}</li>
                     ))}
                 </ul>
+            </div>
+
+            <div className="text-center mt-4">
+                <div
+                    className={isOpen ? "" : "d-inline-block"}
+                    title={isOpen ? "" : "Voting is closed for this poll"}
+                >
+                    <button
+                        className={`btn btn-primary ${!isOpen ? "disabled opacity-50" : ""}`}
+                        onClick={handleVoteClick}
+                        disabled={!isOpen}
+                    >
+                        Vote Now
+                    </button>
+                </div>
+                {!isOpen && (
+                    <p className="text-danger mt-2">Voting is currently closed for this poll.</p>
+                )}
             </div>
         </div>
     );

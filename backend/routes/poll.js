@@ -12,16 +12,23 @@ const db = mysql.createConnection({
 
 
 function generateTokens(pollId, count = 100) {
-    const tokens = [];
+    const rawTokens = [];
+    const hashedTokens = [];
 
     for (let i = 0; i < count; i++) {
-        const rawToken = crypto.randomBytes(16).toString("hex"); // 32-character token
-        tokens.push([pollId, rawToken]);
+        const rawToken = crypto.randomBytes(16).toString("hex"); // 32-character hex token
+        const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+        rawTokens.push({
+            pollId: pollId,
+            token: rawToken
+        });
+
+        hashedTokens.push(hashedToken);
     }
 
-    return tokens;
+    return { rawTokens, hashedTokens };
 }
-
 
 router.get("/", (req, res) => {
     const sql = `

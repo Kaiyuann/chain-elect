@@ -7,6 +7,7 @@ import PollDetailPage from "./pages/PollDetailPage";
 import VotePage from "./pages/VotePage"
 import Admin from "./pages/Admin";
 import Layout from "./components/Layout";
+import NotFoundPage from "./pages/NotFoundPage";
 
 function App() {
 
@@ -21,6 +22,7 @@ function App() {
           <Route path="/poll/:id" element={<PollDetailPage />} />
           <Route path="/poll/:id/vote" element={<VotePage />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </Router>

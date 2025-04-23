@@ -1,10 +1,12 @@
-const express = require("express");
+import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
+import mysql from "mysql2";
+import multer from "multer";
+import { fileURLToPath } from "url";
+import path from "path";
+import rateLimit from "express-rate-limit";
 const router = express.Router();
-const mysql = require("mysql2");
-const multer = require("multer");
-const path = require("path");
-const rateLimit = require("express-rate-limit");
-
 
 
 const db = mysql.createConnection({
@@ -22,6 +24,8 @@ db.connect((err) => {
     }
 });
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const storage = multer.diskStorage({
     destination: path.join(__dirname, "../uploads"),
@@ -185,4 +189,5 @@ router.get("/users", (req, res) => {
         });
     });
 });
-module.exports = router;
+
+export default router;

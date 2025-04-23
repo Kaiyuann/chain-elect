@@ -1,7 +1,27 @@
-const express = require("express");
+import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
+import mysql from "mysql2";
+import crypto from "crypto";
+import { ethers } from "ethers";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const addressFilePath = path.join(__dirname, "..", "..", "shared", "contracts", "contract-address.json");
+const abiFilePath = path.join(__dirname, "..", "..", "shared", "contracts", "Voting.json");
+
+const contractAddress = JSON.parse(fs.readFileSync(addressFilePath, "utf-8")).Voting;
+const contractArtifact = JSON.parse(fs.readFileSync(abiFilePath, "utf-8"));
+
 const router = express.Router();
-const mysql = require("mysql2");
-const crypto = require("crypto");
+
+const provider = new ethers.JsonRpcProvider("http://localhost:8545");
+const signer = await provider.getSigner(0);
+const votingContract = new ethers.Contract(contractAddress, contractArtifact.abi, signer);
 
 const db = mysql.createConnection({
     host: process.env.DB_HOST,
@@ -47,13 +67,13 @@ router.get("/", (req, res) => {
     });
 });
 
-router.post("/", (req, res) => {
-    const { title, description, endTime, options } = req.body;
+router.post("/", async (req, res) => {
+    const { title, description, endTime, options, allowLiveResults } = req.body;
 
-    const insertPollSql = "INSERT INTO poll (title, description, endTime, creator_id) VALUES (?, ?, ?, ?)";
-    const values = [title, description, endTime, req.cookies.session_id || 1];
+    const insertPollSql = "INSERT INTO poll (title, description, endTime, creator_id, allow_live_results) VALUES (?, ?, ?, ?, ?)";
+    const values = [title, description, endTime, req.cookies.session_id || 1, allowLiveResults ? 1 : 0];
 
-    db.query(insertPollSql, values, (err, result) => {
+    db.query(insertPollSql, values, async (err, result) => {
         if (err) {
             console.error("Failed to create poll:", err);
             return res.status(500).json({ message: "Poll creation failed" });
@@ -62,24 +82,47 @@ router.post("/", (req, res) => {
         const optionSql = "INSERT INTO poll_options (poll_id, label) VALUES ?";
         const optionValues = options.map(opt => [pollId, opt]);
 
-        db.query(optionSql, [optionValues], (err2) => {
+        db.query(optionSql, [optionValues], async (err2) => {
             if (err2) {
                 return res.status(500).json({ message: "Poll created, but options failed" });
             }
 
-            const tokens = generateTokens(pollId, 100); // 100 tokens per poll
+            const { rawTokens, hashedTokens } = generateTokens(pollId, 100); // 100 tokens per poll
+            const tokenValues = rawTokens.map(t => [t.pollId, t.token]);
 
             const tokenSql = "INSERT INTO poll_token (poll_id, token) VALUES ?";
-            db.query(tokenSql, [tokens], (err3) => {
+            db.query(tokenSql, [tokenValues], async (err3) => {
                 if (err3) {
                     console.error("Failed to insert poll tokens:", err3);
                     return res.status(500).json({ message: "Poll and options created, but token generation failed" });
                 }
 
-                res.status(201).json({
-                    message: "Poll, options, and tokens created successfully",
-                    pollId: pollId
-                });
+                try {
+                    const tx = await votingContract.createPoll(allowLiveResults, options.length);
+                    const receipt = await tx.wait();
+
+                    const blockchainPollId = Number(await votingContract.pollCount()) - 1;
+
+                    db.query(
+                        "UPDATE poll SET blockchain_poll_id = ? WHERE id = ?",
+                        [blockchainPollId, pollId],
+                        (err4) => {
+                            if (err4) {
+                                console.error("Failed to update blockchain poll ID:", err4);
+                                return res.status(500).json({ message: "Poll created but blockchain sync failed." });
+                            }
+
+                            res.status(201).json({
+                                message: "Poll created successfully on both DB and blockchain",
+                                pollId: pollId,
+                                blockchainPollId: blockchainPollId
+                            });
+                        }
+                    );
+                } catch (blockchainError) {
+                    console.error("Blockchain transaction failed:", blockchainError);
+                    return res.status(500).json({ message: "Poll created in DB but failed on blockchain." });
+                }
             });
         });
     });
@@ -116,4 +159,4 @@ router.get("/:id", (req, res) => {
     });
 });
 
-module.exports = router;
+export default router;

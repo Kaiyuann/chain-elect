@@ -6,6 +6,7 @@ function CreatePollModal() {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [endTime, setEndTime] = useState("");
+    const [allowLiveResults, setAllowLiveResults] = useState(false);
     const [options, setOptions] = useState<string[]>([""]);
 
 
@@ -32,7 +33,8 @@ function CreatePollModal() {
                 title,
                 description,
                 endTime,
-                options
+                options,
+                allowLiveResults
             }, {
                 withCredentials: true
             });
@@ -98,6 +100,19 @@ function CreatePollModal() {
                                             onChange={(e) => setEndTime(e.target.value)}
                                             required
                                         />
+                                    </div>
+
+                                    <div className="form-check mb-3">
+                                        <input
+                                            className="form-check-input"
+                                            type="checkbox"
+                                            id="liveResultsCheckbox"
+                                            checked={allowLiveResults}
+                                            onChange={(e) => setAllowLiveResults(e.target.checked)}
+                                        />
+                                        <label className="form-check-label" htmlFor="liveResultsCheckbox">
+                                            Allow Live Results Viewing
+                                        </label>
                                     </div>
 
                                     <div className="mb-3">

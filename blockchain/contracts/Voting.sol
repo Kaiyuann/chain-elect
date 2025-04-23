@@ -7,8 +7,6 @@ contract Voting {
         bool allowLiveResults;
         bool isActive;
         uint optionCount;
-        string title;
-        string description;
     }
 
     uint public pollCount;
@@ -18,24 +16,22 @@ contract Voting {
     mapping(uint => mapping(uint => uint)) public voteCounts;        // pollId => optionId => count
 
     /// Event for frontend listening
-    event PollCreated(uint pollId, address creator, string title);
+    event PollCreated(uint pollId, address creator);
     event PollClosed(uint pollId);
     event VoteCasted(uint pollId, uint optionId);
 
     /// Create a new poll
-    function createPoll(string memory title, string memory description, bool allowLiveResults, uint optionCount) public {
+    function createPoll(bool allowLiveResults, uint optionCount) public {
         require(optionCount > 1, "Must have at least 2 options");
 
         polls[pollCount] = Poll({
             creator: msg.sender,
             allowLiveResults: allowLiveResults,
             isActive: true,
-            optionCount: optionCount,
-            title: title,
-            description: description
+            optionCount: optionCount
         });
 
-        emit PollCreated(pollCount, msg.sender, title);
+        emit PollCreated(pollCount, msg.sender);
         pollCount++;
     }
 

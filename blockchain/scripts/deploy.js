@@ -7,12 +7,11 @@ async function main() {
 
   const Voting = await hre.ethers.getContractFactory("Voting");
   const voting = await Voting.deploy();
-  await voting.deployed();
 
-  console.log(`Voting contract deployed to: ${voting.address}`);
+  console.log(`Voting contract deployed to: ${voting.target}`);
 
   // Prepare the save folder
-  const contractsDir = path.join(__dirname, "..", "..", "frontend", "src", "contracts");
+  const contractsDir = path.join(__dirname, "..", "..", "shared", "contracts");
 
   if (!fs.existsSync(contractsDir)) {
     fs.mkdirSync(contractsDir, { recursive: true });
@@ -21,7 +20,7 @@ async function main() {
   // Write address to JSON
   fs.writeFileSync(
     path.join(contractsDir, "contract-address.json"),
-    JSON.stringify({ Voting: voting.address }, null, 2)
+    JSON.stringify({ Voting: voting.target }, null, 2)
   );
 
   // Write ABI to JSON
@@ -32,7 +31,7 @@ async function main() {
     JSON.stringify(contractArtifact, null, 2)
   );
 
-  console.log("Contract address and ABI saved to frontend/src/contracts/");
+  console.log("Contract address and ABI saved to shared/contracts/");
 }
 
 main().catch((error) => {

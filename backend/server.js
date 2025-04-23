@@ -1,8 +1,19 @@
-const express = require("express");
-const cors = require("cors");
-const cookieParser = require("cookie-parser");
-const path = require("path");
-require("dotenv").config();
+import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import { fileURLToPath } from "url";
+import path from "path";
+
+
+import authRoutes from "./routes/auth.js";
+import pollRoutes from "./routes/poll.js";
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,8 +25,6 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-const authRoutes = require("./routes/auth");
-const pollRoutes = require("./routes/poll");
 app.use("/api", authRoutes);
 app.use("/api/polls", pollRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

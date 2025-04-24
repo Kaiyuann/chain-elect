@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import mysql from "mysql2";
 import crypto from "crypto";
+import { keccak256, toUtf8Bytes } from "ethers"; 
 import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
@@ -37,7 +38,7 @@ function generateTokens(pollId, count = 100) {
 
     for (let i = 0; i < count; i++) {
         const rawToken = crypto.randomBytes(16).toString("hex"); // 32-character hex token
-        const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+        const hashedToken = keccak256(toUtf8Bytes(rawToken));
 
         rawTokens.push({
             pollId: pollId,
@@ -103,6 +104,9 @@ router.post("/", async (req, res) => {
 
                     const blockchainPollId = Number(await votingContract.pollCount()) - 1;
 
+                    const tokenTx = await votingContract.addValidTokens(blockchainPollId, hashedTokens);
+                    await tokenTx.wait();
+
                     db.query(
                         "UPDATE poll SET blockchain_poll_id = ? WHERE id = ?",
                         [blockchainPollId, pollId],
@@ -134,7 +138,7 @@ router.get("/:id", (req, res) => {
 
     const sqlPoll = `
     SELECT p.id, p.title, p.description, p.creator_id, u.username AS creator_name,
-           p.startTime, p.endTime, p.status
+           p.startTime, p.endTime, p.allow_live_results, p.status, p.blockchain_poll_id
     FROM poll p
     JOIN user u ON p.creator_id = u.id
     WHERE p.id = ?
@@ -155,6 +159,61 @@ router.get("/:id", (req, res) => {
 
             poll.options = optionResults;
             res.json(poll);
+        });
+    });
+});
+
+router.post("/:id/request-token", (req, res) => {
+    const pollId = req.params.id;
+    const userId = req.cookies.session_id;
+
+    if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    // Check if user has already received a token for this poll
+    const checkIssuedSql = "SELECT * FROM token_issuance WHERE user_id = ? AND poll_id = ?";
+    db.query(checkIssuedSql, [userId, pollId], (checkErr, checkResults) => {
+        if (checkErr) {
+            console.error("Check token issuance error:", checkErr);
+            return res.status(500).json({ message: "Internal server error" });
+        }
+
+        if (checkResults.length > 0) {
+            return res.status(400).json({ message: "You have already received a token for this poll." });
+        }
+
+        // Pick one unused token
+        const selectTokenSql = "SELECT id, token FROM poll_token WHERE poll_id = ? AND issued = 0 ORDER BY RAND() LIMIT 1";
+        db.query(selectTokenSql, [pollId], (selectErr, tokenResults) => {
+            if (selectErr || tokenResults.length === 0) {
+                console.error("Token selection error:", selectErr);
+                return res.status(500).json({ message: "No available tokens for this poll." });
+            }
+
+            const tokenId = tokenResults[0].id;
+            const token = tokenResults[0].token;
+
+            // Mark token as issued
+            const updateTokenSql = "UPDATE poll_token SET issued = 1 WHERE id = ?";
+            db.query(updateTokenSql, [tokenId], (updateErr) => {
+                if (updateErr) {
+                    console.error("Token update error:", updateErr);
+                    return res.status(500).json({ message: "Failed to issue token." });
+                }
+
+                // Record token issuance
+                const insertIssuanceSql = "INSERT INTO token_issuance (user_id, poll_id, issued_at) VALUES (?, ?, NOW())";
+                db.query(insertIssuanceSql, [userId, pollId], (insertErr) => {
+                    if (insertErr) {
+                        console.error("Issuance record error:", insertErr);
+                        return res.status(500).json({ message: "Failed to record token issuance." });
+                    }
+
+                    // ✅ Send token back to frontend
+                    res.json({ token: token });
+                });
+            });
         });
     });
 });

@@ -1,0 +1,4 @@
+poll = await Voting.polls(1);
+console.log(poll);
+const poll = await Voting.polls(0);
+const Voting = await ethers.getContractAt("Voting", "0x5FbDB2315678afecb367f032d93F642f64180aa3");

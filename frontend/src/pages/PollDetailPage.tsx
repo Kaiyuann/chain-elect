@@ -1,6 +1,13 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { ethers } from "ethers";
+import VotingContractABI from "../../../shared/contracts/Voting.json";
+import contractAddress from "../../../shared/contracts/contract-address.json";
+import PollResultsChart from "../components/PollResultsChart";
+
+const SHARED_PRIVATE_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+const PROVIDER_URL = "http://localhost:8545"; // Hardhat local node
 
 interface Poll {
     id: number;
@@ -10,13 +17,17 @@ interface Poll {
     creator_name: string;
     startTime: string;
     endTime: string;
+    allow_live_results: number;
     status: string;
-    options?: { id: number; label: string }[];
+    blockchain_poll_id: number;
+    options: { id: number; label: string }[];
 }
+
 
 function PollDetailPage() {
     const { id } = useParams<{ id: string }>();
     const [poll, setPoll] = useState<Poll | null>(null);
+    const [results, setResults] = useState<number[]>([]);
 
     useEffect(() => {
         axios.get(`http://localhost:5000/api/polls/${id}`, {
@@ -28,6 +39,32 @@ function PollDetailPage() {
 
     const navigate = useNavigate();
     const isOpen = poll != null && poll.status === "open";
+
+    const fetchLiveResults = async (pollId: number) => {
+        try {
+            const provider = new ethers.JsonRpcProvider(PROVIDER_URL);
+            const wallet = new ethers.Wallet(SHARED_PRIVATE_KEY, provider);
+            const votingContract = new ethers.Contract(
+                contractAddress.Voting,
+                VotingContractABI.abi,
+                wallet
+            );
+            const resultArray = await votingContract.getResults(pollId);
+            setResults(resultArray.map((count: bigint) => Number(count)));
+        } catch (error) {
+            console.error("Failed to fetch live results:", error);
+        }
+    };
+
+    useEffect(() => {
+        console.log(poll);
+        if (poll && poll.allow_live_results && poll.blockchain_poll_id !== null) {
+            const interval = setInterval(() => {
+                fetchLiveResults(poll.blockchain_poll_id);
+            }, 5000); // Update every 5 seconds
+            return () => clearInterval(interval);
+        }
+    }, [poll]);
 
     const handleVoteClick = () => {
         if (isOpen) {
@@ -93,6 +130,9 @@ function PollDetailPage() {
                     <p className="text-danger mt-2">Voting is currently closed for this poll.</p>
                 )}
             </div>
+            {poll && poll.allow_live_results && poll.blockchain_poll_id !== null && results.length > 0 && (
+                <PollResultsChart results={results} options={poll.options} />
+            )}
         </div>
     );
 };

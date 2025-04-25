@@ -62,7 +62,7 @@ function VotePage() {
     setError("");
     setSuccess("");
 
-    if (!selectedOption || !token || blockchainPollId === null) {
+    if (selectedOption === null || !token || blockchainPollId === null) {
       setError("Missing information. Make sure to select an option, enter a token, and confirm poll data.");
       return;
     }
@@ -128,13 +128,13 @@ function VotePage() {
           <label className="form-label fw-bold">Choose Your Option:</label>
           <select
             className="form-select"
-            value={selectedOption || ""}
+            value={selectedOption !== null ? selectedOption : ""}
             onChange={(e) => setSelectedOption(Number(e.target.value))}
             required
           >
             <option value="">-- Select an Option --</option>
-            {options.map((option) => (
-              <option key={option.id} value={option.id}>
+            {options.map((option, index) => (
+              <option key={option.id} value={index}>
                 {option.label}
               </option>
             ))}

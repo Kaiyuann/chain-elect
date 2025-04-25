@@ -53,7 +53,7 @@ function generateTokens(pollId, count = 100) {
 
 router.get("/", (req, res) => {
     const sql = `
-    SELECT id, title, description, creator_id, startTime, endTime, status
+    SELECT id, title, description, creator_id, startTime, endTime, is_restricted, status
     FROM poll
     ORDER BY endTime DESC
   `;
@@ -138,7 +138,7 @@ router.get("/:id", (req, res) => {
 
     const sqlPoll = `
     SELECT p.id, p.title, p.description, p.creator_id, u.username AS creator_name,
-           p.startTime, p.endTime, p.allow_live_results, p.status, p.blockchain_poll_id
+           p.startTime, p.endTime, p.allow_live_results, p.is_restricted, p.status, p.blockchain_poll_id
     FROM poll p
     JOIN user u ON p.creator_id = u.id
     WHERE p.id = ?

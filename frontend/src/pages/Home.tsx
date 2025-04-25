@@ -10,6 +10,7 @@ interface Poll {
     creator_id: number;
     startTime: string;
     endTime: string;
+    isRestricted: boolean;
     status: string;
 }
 

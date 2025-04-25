@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import path from "path";
 
+import { startAutoClosePolls } from "./utils/autoClosePolls.js";
 
 import authRoutes from "./routes/auth.js";
 import pollRoutes from "./routes/poll.js";
@@ -28,6 +29,8 @@ app.use(cookieParser());
 app.use("/api", authRoutes);
 app.use("/api/polls", pollRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+startAutoClosePolls();
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);

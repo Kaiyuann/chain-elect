@@ -18,6 +18,7 @@ interface Poll {
     startTime: string;
     endTime: string;
     allow_live_results: number;
+    isRestricted: number;
     status: string;
     blockchain_poll_id: number;
     options: { id: number; label: string }[];

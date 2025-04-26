@@ -18,7 +18,7 @@ interface Poll {
     startTime: string;
     endTime: string;
     allow_live_results: number;
-    isRestricted: number;
+    is_restricted: number;
     status: string;
     blockchain_poll_id: number;
     options: { id: number; label: string }[];
@@ -29,13 +29,29 @@ function PollDetailPage() {
     const { id } = useParams<{ id: string }>();
     const [poll, setPoll] = useState<Poll | null>(null);
     const [results, setResults] = useState<number[]>([]);
+    const [isAllowed, setIsAllowed] = useState<boolean>(true);
 
     useEffect(() => {
-        axios.get(`http://localhost:5000/api/polls/${id}`, {
-            withCredentials: true
-        })
-            .then(res => setPoll(res.data))
-            .catch(err => console.error("Failed to fetch poll:", err));
+        axios.get(`http://localhost:5000/api/polls/${id}`, { withCredentials: true })
+            .then(async (res) => {
+                setPoll(res.data);
+
+                if (res.data.is_restricted === 1) {
+                    try {
+                        const whitelistResponse = await axios.get(
+                            `http://localhost:5000/api/polls/${id}/check-whitelist`,
+                            { withCredentials: true }
+                        );
+                        setIsAllowed(whitelistResponse.data.allowed);
+                    } catch (checkErr) {
+                        console.error("Whitelist check failed:", checkErr);
+                        setIsAllowed(false);
+                    }
+                } else {
+                    setIsAllowed(true);
+                }
+            })
+            .catch((err) => console.error("Failed to fetch poll:", err));
     }, [id]);
 
     const navigate = useNavigate();
@@ -117,12 +133,18 @@ function PollDetailPage() {
             <div className="text-center mt-4">
                 <div
                     className={isOpen ? "" : "d-inline-block"}
-                    title={isOpen ? "" : "Voting is closed for this poll"}
+                    title={
+                        !isOpen
+                            ? "Voting is closed for this poll"
+                            : poll?.is_restricted === 1 && !isAllowed
+                                ? "You are not allowed to vote in this restricted poll"
+                                : ""
+                    }
                 >
                     <button
-                        className={`btn btn-primary ${!isOpen ? "disabled opacity-50" : ""}`}
+                        className={`btn btn-primary ${(!isOpen || (poll?.is_restricted === 1 && !isAllowed)) ? "disabled opacity-50" : ""}`}
                         onClick={handleVoteClick}
-                        disabled={!isOpen}
+                        disabled={!isOpen || (poll?.is_restricted === 1 && !isAllowed)}
                     >
                         Vote Now
                     </button>
@@ -130,8 +152,11 @@ function PollDetailPage() {
                 {!isOpen && (
                     <p className="text-danger mt-2">Voting is currently closed for this poll.</p>
                 )}
+                {poll?.is_restricted === 1 && !isAllowed && isOpen && (
+                    <p className="text-warning mt-2">You are not allowed to vote in this poll.</p>
+                )}
             </div>
-            {poll && poll.allow_live_results && poll.blockchain_poll_id !== null && results.length > 0 && (
+            {poll && poll.allow_live_results === 1 && poll.blockchain_poll_id !== null && results.length > 0 && (
                 <PollResultsChart results={results} options={poll.options} />
             )}
         </div>

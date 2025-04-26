@@ -10,7 +10,7 @@ interface Poll {
     creator_id: number;
     startTime: string;
     endTime: string;
-    isRestricted: boolean;
+    is_restricted: number;
     status: string;
 }
 
@@ -104,9 +104,19 @@ function Home() {
                                                 {poll.status.toUpperCase()}
                                             </span>
                                         </div>
+
                                         <p className="card-text text-muted small">
                                             {getTimeRemaining(poll.endTime)}
                                         </p>
+
+                                        
+                                        {poll.is_restricted === 1 && (
+                                            <div>
+                                                <span className="badge bg-light text-dark">
+                                                    🔒 Restricted Access
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

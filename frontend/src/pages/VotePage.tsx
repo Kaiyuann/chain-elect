@@ -80,7 +80,7 @@ function VotePage() {
       const tx = await votingContract.vote(blockchainPollId, token, selectedOption);
       await tx.wait();
 
-      setSuccess("Vote successfully submitted on the blockchain!");
+      setSuccess(`Vote successfully submitted on the blockchain! Transaction Hash: ${tx.hash}`);
     } catch (err: any) {
       console.error("Voting failed:", err);
       setError("Voting failed. Check console for details.");

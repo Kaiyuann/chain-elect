@@ -8,7 +8,9 @@ function CreatePollModal() {
     const [endTime, setEndTime] = useState("");
     const [allowLiveResults, setAllowLiveResults] = useState(false);
     const [options, setOptions] = useState<string[]>([""]);
-
+    const [whitelistEmails, setWhitelistEmails] = useState<string[]>([]);
+    const [emailInput, setEmailInput] = useState<string>("");
+    const [isRestricted, setIsRestricted] = useState(false);
 
     const handleOptionChange = (index: number, value: string) => {
         const updated = [...options];
@@ -25,6 +27,17 @@ function CreatePollModal() {
         setOptions(updated);
     };
 
+    const handleAddEmail = () => {
+        if (emailInput && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+            setWhitelistEmails([...whitelistEmails, emailInput]);
+            setEmailInput("");
+        }
+    };
+
+    const handleRemoveEmail = (index: number) => {
+        setWhitelistEmails(whitelistEmails.filter((_, i) => i !== index));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -34,7 +47,9 @@ function CreatePollModal() {
                 description,
                 endTime,
                 options,
-                allowLiveResults
+                allowLiveResults,
+                isRestricted,
+                whitelistEmails
             }, {
                 withCredentials: true
             });
@@ -114,6 +129,47 @@ function CreatePollModal() {
                                             Allow Live Results Viewing
                                         </label>
                                     </div>
+
+                                    <div className="form-check mb-3">
+                                        <input
+                                            className="form-check-input"
+                                            type="checkbox"
+                                            id="restrictPollCheckbox"
+                                            checked={isRestricted}
+                                            onChange={(e) => setIsRestricted(e.target.checked)}
+                                        />
+                                        <label className="form-check-label" htmlFor="restrictPollCheckbox">
+                                            Restrict poll to specific email addresses
+                                        </label>
+                                    </div>
+
+                                    {isRestricted && (
+                                        <div className="mb-3">
+                                            <label className="form-label">Whitelist Emails</label>
+                                            <div className="d-flex flex-wrap mb-2">
+                                                {whitelistEmails.map((email, index) => (
+                                                    <span key={index} className="badge bg-primary me-2 mb-2">
+                                                        {email}
+                                                        <button
+                                                            type="button"
+                                                            className="btn-close btn-close-white btn-sm ms-2"
+                                                            onClick={() => handleRemoveEmail(index)}
+                                                        ></button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <input
+                                                type="email"
+                                                className="form-control"
+                                                placeholder="Type email and press Enter"
+                                                value={emailInput}
+                                                onChange={(e) => setEmailInput(e.target.value)}
+                                                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
+                                            />
+                                            <div className="form-text">Press Enter to add each email. Invalid emails will be ignored.</div>
+                                        </div>
+                                    )}
+
 
                                     <div className="mb-3">
                                         <label className="form-label">Vote Options</label>

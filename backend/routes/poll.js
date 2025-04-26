@@ -69,10 +69,10 @@ router.get("/", (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-    const { title, description, endTime, options, allowLiveResults } = req.body;
+    const { title, description, endTime, options, allowLiveResults, isRestricted, whitelistEmails } = req.body;
 
-    const insertPollSql = "INSERT INTO poll (title, description, endTime, creator_id, allow_live_results) VALUES (?, ?, ?, ?, ?)";
-    const values = [title, description, endTime, req.cookies.session_id || 1, allowLiveResults ? 1 : 0];
+    const insertPollSql = "INSERT INTO poll (title, description, endTime, creator_id, allow_live_results, is_restricted) VALUES (?, ?, ?, ?, ?, ?)";
+    const values = [title, description, endTime, req.cookies.session_id || 1, allowLiveResults ? 1 : 0, isRestricted ? 1 : 0];
 
     db.query(insertPollSql, values, async (err, result) => {
         if (err) {
@@ -86,6 +86,18 @@ router.post("/", async (req, res) => {
         db.query(optionSql, [optionValues], async (err2) => {
             if (err2) {
                 return res.status(500).json({ message: "Poll created, but options failed" });
+            }
+
+            if (isRestricted && Array.isArray(whitelistEmails) && whitelistEmails.length > 0) {
+                const whitelistSql = "INSERT INTO poll_whitelist (poll_id, email) VALUES ?";
+                const whitelistValues = whitelistEmails.map(email => [pollId, email]);
+
+                db.query(whitelistSql, [whitelistValues], (err3) => {
+                    if (err3) {
+                        console.error("Failed to insert whitelist emails:", err3);
+                        return res.status(500).json({ message: "Poll created, but whitelist failed." });
+                    }
+                });
             }
 
             const { rawTokens, hashedTokens } = generateTokens(pollId, 100); // 100 tokens per poll
@@ -163,6 +175,30 @@ router.get("/:id", (req, res) => {
     });
 });
 
+router.get("/:id/check-whitelist", (req, res) => {
+    const pollId = req.params.id;
+    const userId = req.cookies.session_id;
+
+    if (!userId) {
+        return res.status(401).json({ allowed: false, message: "User not authenticated" });
+    }
+
+    const sql = `
+        SELECT pw.*
+        FROM poll_whitelist pw
+        JOIN user u ON pw.email = u.email
+        WHERE pw.poll_id = ? AND u.id = ?
+    `;
+
+    db.query(sql, [pollId, userId], (err, results) => {
+        if (err) {
+            console.error("Whitelist check error:", err);
+            return res.status(500).json({ allowed: false });
+        }
+        res.json({ allowed: results.length > 0 });
+    });
+});
+
 router.post("/:id/request-token", (req, res) => {
     const pollId = req.params.id;
     const userId = req.cookies.session_id;
@@ -171,51 +207,89 @@ router.post("/:id/request-token", (req, res) => {
         return res.status(401).json({ message: "User not authenticated" });
     }
 
-    // Check if user has already received a token for this poll
-    const checkIssuedSql = "SELECT * FROM token_issuance WHERE user_id = ? AND poll_id = ?";
-    db.query(checkIssuedSql, [userId, pollId], (checkErr, checkResults) => {
-        if (checkErr) {
-            console.error("Check token issuance error:", checkErr);
-            return res.status(500).json({ message: "Internal server error" });
+    // Check if the poll is restricted
+    const checkPollSql = "SELECT is_restricted FROM poll WHERE id = ?";
+    db.query(checkPollSql, [pollId], (pollErr, pollResults) => {
+        if (pollErr || pollResults.length === 0) {
+            console.error("Poll check error:", pollErr);
+            return res.status(500).json({ message: "Poll not found or internal error." });
         }
 
-        if (checkResults.length > 0) {
-            return res.status(400).json({ message: "You have already received a token for this poll." });
-        }
+        const isRestricted = pollResults[0].is_restricted;
 
-        // Pick one unused token
-        const selectTokenSql = "SELECT id, token FROM poll_token WHERE poll_id = ? AND issued = 0 ORDER BY RAND() LIMIT 1";
-        db.query(selectTokenSql, [pollId], (selectErr, tokenResults) => {
-            if (selectErr || tokenResults.length === 0) {
-                console.error("Token selection error:", selectErr);
-                return res.status(500).json({ message: "No available tokens for this poll." });
-            }
-
-            const tokenId = tokenResults[0].id;
-            const token = tokenResults[0].token;
-
-            // Mark token as issued
-            const updateTokenSql = "UPDATE poll_token SET issued = 1 WHERE id = ?";
-            db.query(updateTokenSql, [tokenId], (updateErr) => {
-                if (updateErr) {
-                    console.error("Token update error:", updateErr);
-                    return res.status(500).json({ message: "Failed to issue token." });
+        // If poll is restricted, check whitelist
+        if (isRestricted) {
+            const whitelistCheckSql = `
+                SELECT pw.*
+                FROM poll_whitelist pw
+                JOIN user u ON pw.email = u.email
+                WHERE pw.poll_id = ? AND u.id = ?
+            `;
+            db.query(whitelistCheckSql, [pollId, userId], (whitelistErr, whitelistResults) => {
+                if (whitelistErr) {
+                    console.error("Whitelist check error:", whitelistErr);
+                    return res.status(500).json({ message: "Internal server error" });
                 }
 
-                // Record token issuance
-                const insertIssuanceSql = "INSERT INTO token_issuance (user_id, poll_id, issued_at) VALUES (?, ?, NOW())";
-                db.query(insertIssuanceSql, [userId, pollId], (insertErr) => {
-                    if (insertErr) {
-                        console.error("Issuance record error:", insertErr);
-                        return res.status(500).json({ message: "Failed to record token issuance." });
+                if (whitelistResults.length === 0) {
+                    return res.status(403).json({ message: "You are not allowed to vote in this poll." });
+                }
+
+                // Proceed to token issuance since user is allowed
+                issueToken();
+            });
+        } else {
+            // If not restricted, directly issue token
+            issueToken();
+        }
+
+        function issueToken() {
+            // Check if user has already received a token for this poll
+            const checkIssuedSql = "SELECT * FROM token_issuance WHERE user_id = ? AND poll_id = ?";
+            db.query(checkIssuedSql, [userId, pollId], (checkErr, checkResults) => {
+                if (checkErr) {
+                    console.error("Check token issuance error:", checkErr);
+                    return res.status(500).json({ message: "Internal server error" });
+                }
+
+                if (checkResults.length > 0) {
+                    return res.status(400).json({ message: "You have already received a token for this poll." });
+                }
+
+                // Pick one unused token
+                const selectTokenSql = "SELECT id, token FROM poll_token WHERE poll_id = ? AND issued = 0 ORDER BY RAND() LIMIT 1";
+                db.query(selectTokenSql, [pollId], (selectErr, tokenResults) => {
+                    if (selectErr || tokenResults.length === 0) {
+                        console.error("Token selection error:", selectErr);
+                        return res.status(500).json({ message: "No available tokens for this poll." });
                     }
 
-                    // ✅ Send token back to frontend
-                    res.json({ token: token });
+                    const tokenId = tokenResults[0].id;
+                    const token = tokenResults[0].token;
+
+                    // Mark token as issued
+                    const updateTokenSql = "UPDATE poll_token SET issued = 1 WHERE id = ?";
+                    db.query(updateTokenSql, [tokenId], (updateErr) => {
+                        if (updateErr) {
+                            console.error("Token update error:", updateErr);
+                            return res.status(500).json({ message: "Failed to issue token." });
+                        }
+
+                        // Record token issuance
+                        const insertIssuanceSql = "INSERT INTO token_issuance (user_id, poll_id, issued_at) VALUES (?, ?, NOW())";
+                        db.query(insertIssuanceSql, [userId, pollId], (insertErr) => {
+                            if (insertErr) {
+                                console.error("Issuance record error:", insertErr);
+                                return res.status(500).json({ message: "Failed to record token issuance." });
+                            }
+
+                            // Send token back to frontend
+                            res.json({ token: token });
+                        });
+                    });
                 });
             });
-        });
+        }
     });
 });
-
 export default router;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ethers } from "ethers";
 import VotingContractABI from "../../../shared/contracts/Voting.json";
 import contractAddress from "../../../shared/contracts/contract-address.json";
@@ -20,6 +20,8 @@ function VotePage() {
   const [success, setSuccess] = useState<string>("");
   const [isVoting, setIsVoting] = useState(false);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     document.title = "Vote | ChainElect";
   }, []);
@@ -33,7 +35,7 @@ function VotePage() {
         setPollTitle(response.data.title);
         setOptions(response.data.options);
         setBlockchainPollId(response.data.blockchain_poll_id);
-        document.title = "Vote: " + response.data.title + " | ChainElect";
+        document.title = "Vote in: " + response.data.title + " | ChainElect";
       } catch (err: any) {
         console.error(err);
         setPollTitle("Poll Not Found");
@@ -99,6 +101,14 @@ function VotePage() {
 
   return (
     <div className="container mt-5">
+      <div className="mb-4">
+        <button
+          className="btn btn-outline-secondary"
+          onClick={() => navigate(`/poll/${pollId}`)}
+        >
+          🡐 Back to Poll Details
+        </button>
+      </div>
       <h2 className="mb-4">Vote in: <span className="text-primary">{pollTitle}</span></h2>
 
       <div className="mb-3">

@@ -14,16 +14,23 @@ function Profile() {
     const [showModal, setShowModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+    useEffect(() => {
+        document.title = "Not Logged In | ChainElect";
+    }, []);
 
     useEffect(() => {
         axios
             .get("http://localhost:5000/api/profile", { withCredentials: true })
-            .then((res) => setUser(res.data))
+            .then((res) => {
+                setUser(res.data);
+                document.title = res.data.username + " | ChainElect";
+            })
             .catch((err) => {
                 console.error(err);
                 setError("Not logged in or session expired");
             });
     }, []);
+
 
     if (error) return <div className="p-4 text-red-500">{error}</div>;
 

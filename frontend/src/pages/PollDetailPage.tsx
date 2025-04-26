@@ -32,9 +32,14 @@ function PollDetailPage() {
     const [isAllowed, setIsAllowed] = useState<boolean>(true);
 
     useEffect(() => {
+        document.title = "Poll Details | ChainElect";
+    }, []);
+
+    useEffect(() => {
         axios.get(`http://localhost:5000/api/polls/${id}`, { withCredentials: true })
             .then(async (res) => {
                 setPoll(res.data);
+                document.title = "Poll Details: " + res.data.title + " | ChainElect";
 
                 if (res.data.is_restricted === 1) {
                     try {

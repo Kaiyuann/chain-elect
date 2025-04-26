@@ -29,6 +29,10 @@ function Home() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        document.title = "Home | ChainElect";
+    }, []);
+
+    useEffect(() => {
         axios
             .get("http://localhost:5000/api/profile", { withCredentials: true })
             .then((res) => {

@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
 
-const NotFoundPage: React.FC = () => {
+function NotFoundPage() {
+
+    useEffect(() => {
+        document.title = "404 - Page Not Found | ChainElect";
+    }, []);
+
     return (
         <div className="container text-center py-5">
             <h1 className="display-4">404 - Page Not Found</h1>

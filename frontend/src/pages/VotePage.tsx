@@ -20,6 +20,10 @@ function VotePage() {
   const [success, setSuccess] = useState<string>("");
 
   useEffect(() => {
+    document.title = "Vote | ChainElect";
+  }, []);
+
+  useEffect(() => {
     const fetchPollDetails = async () => {
       try {
         const response = await axios.get(`http://localhost:5000/api/polls/${pollId}`, {
@@ -28,6 +32,7 @@ function VotePage() {
         setPollTitle(response.data.title);
         setOptions(response.data.options);
         setBlockchainPollId(response.data.blockchain_poll_id);
+        document.title = "Vote: " + response.data.title + " | ChainElect";
       } catch (err: any) {
         console.error(err);
         setPollTitle("Poll Not Found");

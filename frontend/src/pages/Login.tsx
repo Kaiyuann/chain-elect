@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 //import { useNavigate } from "react-router-dom";
 import axios, { AxiosError } from "axios";
 
@@ -9,13 +9,17 @@ function Login() {
 
     //const navigate = useNavigate();
 
+    useEffect(() => {
+        document.title = "Login | ChainElect";
+    }, []);
+
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         try {
             await axios.post("http://localhost:5000/api/login", {
                 email,
                 password,
-            },{
+            }, {
                 withCredentials: true
             });
 

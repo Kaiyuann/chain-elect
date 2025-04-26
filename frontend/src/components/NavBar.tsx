@@ -25,7 +25,7 @@ function NavBar() {
         <nav className="navbar navbar-expand-lg navbar-dark ps-3 pe-3" style={{ background: "linear-gradient(180deg,rgb(18, 110, 130) 0%,rgb(13, 82, 97) 100%)", boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)" }}>
             <NavLink className="navbar-brand d-flex align-items-center" to="/">
                 <img
-                    src="favicon.png"
+                    src="/favicon.png"
                     alt="Logo"
                     width="30"
                     height="30"

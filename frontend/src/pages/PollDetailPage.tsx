@@ -30,6 +30,7 @@ function PollDetailPage() {
     const [poll, setPoll] = useState<Poll | null>(null);
     const [results, setResults] = useState<number[]>([]);
     const [isAllowed, setIsAllowed] = useState<boolean>(true);
+    const [initialLoadDone, setInitialLoadDone] = useState(false);
 
     useEffect(() => {
         document.title = "Poll Details | ChainElect";
@@ -75,6 +76,10 @@ function PollDetailPage() {
             setResults(resultArray.map((count: bigint) => Number(count)));
         } catch (error) {
             console.error("Failed to fetch live results:", error);
+        } finally {
+            if (!initialLoadDone) {
+                setInitialLoadDone(true);
+            }
         }
     };
 
@@ -161,8 +166,23 @@ function PollDetailPage() {
                     <p className="text-warning mt-2">You are not allowed to vote in this poll.</p>
                 )}
             </div>
-            {poll && poll.allow_live_results === 1 && poll.blockchain_poll_id !== null && results.length > 0 && (
-                <PollResultsChart results={results} options={poll.options} />
+            {poll && poll.allow_live_results === 1 && poll.blockchain_poll_id !== null && (
+                <>
+                    {!initialLoadDone ? (
+                        <div className="text-center my-4">
+                            <div className="spinner-border text-primary" role="status">
+                                <span className="visually-hidden">Loading live results...</span>
+                            </div>
+                            <p className="mt-2">Fetching live results from the blockchain...</p>
+                        </div>
+                    ) : (
+                        results.some((count) => count > 0) ? (
+                            <PollResultsChart results={results} options={poll.options} />
+                        ) : (
+                            <p className="text-center mt-5 text-muted">No votes yet.</p>
+                        )
+                    )}
+                </>
             )}
         </div>
     );

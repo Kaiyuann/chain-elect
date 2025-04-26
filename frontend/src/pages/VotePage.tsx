@@ -6,10 +6,10 @@ import VotingContractABI from "../../../shared/contracts/Voting.json";
 import contractAddress from "../../../shared/contracts/contract-address.json";
 
 const SHARED_PRIVATE_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
-const PROVIDER_URL = "http://localhost:8545"; // Hardhat local node
+const PROVIDER_URL = "http://localhost:8545";
 
 function VotePage() {
-  const { id: pollId } = useParams();  // Poll ID from URL
+  const { id: pollId } = useParams();
   const [pollTitle, setPollTitle] = useState<string>("");
   const [token, setToken] = useState<string>("");
   const [showToken, setShowToken] = useState<boolean>(false);
@@ -18,6 +18,7 @@ function VotePage() {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
+  const [isVoting, setIsVoting] = useState(false);
 
   useEffect(() => {
     document.title = "Vote | ChainElect";
@@ -66,9 +67,11 @@ function VotePage() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setIsVoting(true);
 
     if (selectedOption === null || !token || blockchainPollId === null) {
       setError("Missing information. Make sure to select an option, enter a token, and confirm poll data.");
+      setIsVoting(false);
       return;
     }
 
@@ -89,6 +92,8 @@ function VotePage() {
     } catch (err: any) {
       console.error("Voting failed:", err);
       setError("Voting failed. Check console for details.");
+    } finally {
+      setIsVoting(false);
     }
   };
 
@@ -146,8 +151,15 @@ function VotePage() {
           </select>
         </div>
 
-        <button type="submit" className="btn btn-success">
-          Submit Vote
+        <button type="submit" className="btn btn-success" disabled={isVoting}>
+          {isVoting ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              Submitting Vote...
+            </>
+          ) : (
+            "Submit Vote"
+          )}
         </button>
       </form>
 

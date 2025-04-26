@@ -11,6 +11,7 @@ function CreatePollModal() {
     const [whitelistEmails, setWhitelistEmails] = useState<string[]>([]);
     const [emailInput, setEmailInput] = useState<string>("");
     const [isRestricted, setIsRestricted] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleOptionChange = (index: number, value: string) => {
         const updated = [...options];
@@ -40,6 +41,7 @@ function CreatePollModal() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
 
         try {
             await axios.post("http://localhost:5000/api/polls", {
@@ -53,10 +55,12 @@ function CreatePollModal() {
             }, {
                 withCredentials: true
             });
-            setShow(false); // close modal on success
-            window.location.reload(); // refresh poll list
+            setShow(false);
+            window.location.reload();
         } catch (err) {
             console.error("Failed to create poll:", err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -204,8 +208,15 @@ function CreatePollModal() {
                                 </div>
 
                                 <div className="modal-footer">
-                                    <button type="submit" className="btn btn-success">
-                                        Submit
+                                    <button type="submit" className="btn btn-success" disabled={isLoading}>
+                                        {isLoading ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                Creating...
+                                            </>
+                                        ) : (
+                                            "Submit"
+                                        )}
                                     </button>
                                     <button
                                         type="button"

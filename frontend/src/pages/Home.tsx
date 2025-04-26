@@ -14,16 +14,34 @@ interface Poll {
     status: string;
 }
 
+interface User {
+    id: number;
+    username: string;
+    email: string;
+    profilepicture: string;
+}
+
 function Home() {
     const [polls, setPolls] = useState<Poll[]>([]);
     const [search, setSearch] = useState("");
-    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+    const [user, setUser] = useState<User | null | "loading">("loading");
+    const [showMyPollsOnly, setShowMyPollsOnly] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
-        axios.get("http://localhost:5000/api/me", { withCredentials: true })
-            .then(res => setIsLoggedIn(true))
-            .catch(err => setIsLoggedIn(false));
+        axios
+            .get("http://localhost:5000/api/profile", { withCredentials: true })
+            .then((res) => {
+                setUser(res.data);
+                console.log(user);
+            })
+            .catch((err) => {
+                if (err.response && err.response.status === 401) {
+                    setUser(null);
+                } else {
+                    console.error("Unexpected error:", err);
+                }
+            });
     }, []);
 
     useEffect(() => {
@@ -34,9 +52,11 @@ function Home() {
             .catch(err => console.error("Failed to fetch polls:", err));
     }, []);
 
-    const filteredPolls = polls.filter(poll =>
-        poll.title.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredPolls = polls.filter((poll) => {
+        const matchesSearch = poll.title.toLowerCase().includes(search.toLowerCase());
+        const matchesCreator = !showMyPollsOnly || (typeof user === "object" && user !== null && poll.creator_id === user.id);
+        return matchesSearch && matchesCreator;
+    });
 
     const getTimeRemaining = (endTime: string) => {
         const timeDiff = new Date(endTime).getTime() - Date.now();
@@ -52,7 +72,7 @@ function Home() {
     return (
 
         <div className="container py-4">
-            {isLoggedIn === null && (
+            {user === "loading" && (
                 <div className="text-center mt-5">
                     <div className="spinner-border text-primary" role="status">
                         <span className="visually-hidden">Loading...</span>
@@ -60,7 +80,7 @@ function Home() {
                 </div>
             )}
 
-            {isLoggedIn === false && (
+            {user === null && (
                 <div className="position-absolute start-50 top-50 translate-middle text-center">
                     <h1>Welcome!</h1>
                     <p className="mb-4">Please log in or register to continue.</p>
@@ -73,7 +93,7 @@ function Home() {
                 </div>
             )}
 
-            {isLoggedIn === true && (
+            {user && user !== "loading" && (
                 <>
                     <div className="d-flex justify-content-between align-items-center mb-4">
                         <input
@@ -83,6 +103,18 @@ function Home() {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
+                        <div className="form-check me-3">
+                            <input
+                                className="form-check-input"
+                                type="checkbox"
+                                checked={showMyPollsOnly}
+                                onChange={() => setShowMyPollsOnly(!showMyPollsOnly)}
+                                id="myPollsCheckbox"
+                            />
+                            <label className="form-check-label" htmlFor="myPollsCheckbox">
+                                Show My Polls Only
+                            </label>
+                        </div>
                         <CreatePollModal />
                     </div>
 
@@ -109,7 +141,7 @@ function Home() {
                                             {getTimeRemaining(poll.endTime)}
                                         </p>
 
-                                        
+
                                         {poll.is_restricted === 1 && (
                                             <div>
                                                 <span className="badge bg-light text-dark">

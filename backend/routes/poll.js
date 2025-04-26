@@ -51,7 +51,15 @@ function generateTokens(pollId, count = 100) {
     return { rawTokens, hashedTokens };
 }
 
-router.get("/", (req, res) => {
+function authMiddleware(req, res, next) {
+    if (req.session.userId) {
+        next();
+    } else {
+        res.status(401).json({ message: "Not logged in" });
+    }
+}
+
+router.get("/", authMiddleware, (req, res) => {
     const sql = `
     SELECT id, title, description, creator_id, startTime, endTime, is_restricted, status
     FROM poll
@@ -68,11 +76,11 @@ router.get("/", (req, res) => {
     });
 });
 
-router.post("/", async (req, res) => {
+router.post("/", authMiddleware, async (req, res) => {
     const { title, description, endTime, options, allowLiveResults, isRestricted, whitelistEmails } = req.body;
 
     const insertPollSql = "INSERT INTO poll (title, description, endTime, creator_id, allow_live_results, is_restricted) VALUES (?, ?, ?, ?, ?, ?)";
-    const values = [title, description, endTime, req.cookies.session_id || 1, allowLiveResults ? 1 : 0, isRestricted ? 1 : 0];
+    const values = [title, description, endTime, req.session.userId || 1, allowLiveResults ? 1 : 0, isRestricted ? 1 : 0];
 
     db.query(insertPollSql, values, async (err, result) => {
         if (err) {
@@ -145,7 +153,7 @@ router.post("/", async (req, res) => {
 });
 
 
-router.get("/:id", (req, res) => {
+router.get("/:id", authMiddleware, (req, res) => {
     const pollId = req.params.id;
 
     const sqlPoll = `
@@ -175,13 +183,9 @@ router.get("/:id", (req, res) => {
     });
 });
 
-router.get("/:id/check-whitelist", (req, res) => {
+router.get("/:id/check-whitelist", authMiddleware, (req, res) => {
     const pollId = req.params.id;
-    const userId = req.cookies.session_id;
-
-    if (!userId) {
-        return res.status(401).json({ allowed: false, message: "User not authenticated" });
-    }
+    const userId = req.session.userId;
 
     const sql = `
         SELECT pw.*
@@ -199,13 +203,9 @@ router.get("/:id/check-whitelist", (req, res) => {
     });
 });
 
-router.post("/:id/request-token", (req, res) => {
+router.post("/:id/request-token", authMiddleware, (req, res) => {
     const pollId = req.params.id;
-    const userId = req.cookies.session_id;
-
-    if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-    }
+    const userId = req.session.userId;
 
     // Check if the poll is restricted
     const checkPollSql = "SELECT is_restricted FROM poll WHERE id = ?";

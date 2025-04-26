@@ -4,6 +4,7 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import session from "express-session";
 import { fileURLToPath } from "url";
 import path from "path";
 
@@ -25,6 +26,19 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+app.use(session({
+  key: "session_id",
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: false,
+    sameSite: "strict",
+    maxAge: 1000 * 60 * 60
+  }
+}));
 
 app.use("/api", authRoutes);
 app.use("/api/polls", pollRoutes);

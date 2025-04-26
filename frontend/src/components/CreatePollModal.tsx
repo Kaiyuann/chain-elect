@@ -146,7 +146,7 @@ function CreatePollModal() {
                                     {isRestricted && (
                                         <div className="mb-3">
                                             <label className="form-label">Whitelist Emails</label>
-                                            <div className="d-flex flex-wrap mb-2">
+                                            <div className="d-flex flex-wrap">
                                                 {whitelistEmails.map((email, index) => (
                                                     <span key={index} className="badge bg-primary me-2 mb-2">
                                                         {email}

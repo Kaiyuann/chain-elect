@@ -57,12 +57,13 @@ const loginLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-router.get("/me", (req, res) => {
-    const sessionId = req.cookies.session_id;
-    if (!sessionId) return res.status(401).json({ loggedIn: false });
-
-    res.json({ loggedIn: true });
-});
+const authMiddleware = (req, res, next) => {
+    if (req.session.userId) {
+        next();
+    } else {
+        res.status(401).json({ message: "Not logged in" });
+    }
+};
 
 router.post("/register", async (req, res) => {
     const { username, email, password } = req.body;
@@ -96,17 +97,7 @@ router.post("/login", loginLimiter, (req, res) => {
         if (results.length > 0) {
             const user = results[0];
 
-            res.cookie("session_id", user.id, {
-                httpOnly: false,
-                sameSite: "Strict",
-                secure: false
-            });
-
-            res.cookie("role", user.role, {
-                httpOnly: false,
-                sameSite: "Strict",
-                secure: false
-            });
+            req.session.userId = user.id
 
             return res.json({ message: "Login successful", user });
         } else {
@@ -115,12 +106,8 @@ router.post("/login", loginLimiter, (req, res) => {
     });
 });
 
-router.get("/profile", (req, res) => {
-    const userId = req.cookies.session_id;
-
-    if (!userId) {
-        return res.status(401).json({ message: "Not logged in" });
-    }
+router.get("/profile", authMiddleware, (req, res) => {
+    const userId = req.session.userId;
 
     const sql = `SELECT * FROM user WHERE id = ?`;
 
@@ -139,9 +126,13 @@ router.get("/profile", (req, res) => {
     });
 });
 
-router.post("/upload-profile", upload.single("profile"), (req, res) => {
-    const sessionId = req.cookies.session_id;
+router.post("/upload-profile", authMiddleware, upload.single("profile"), (req, res) => {
+    const sessionId = req.session.userId;
     const newFileName = req.file.filename;
+
+    if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+    }
 
     const sql = `UPDATE user SET profilepicture = ? WHERE id = ?`;
     db.query(sql, [newFileName, sessionId], (err, result) => {
@@ -153,41 +144,16 @@ router.post("/upload-profile", upload.single("profile"), (req, res) => {
     });
 });
 
-router.post("/logout", (req, res) => {
-    res.clearCookie("session_id");
-    res.clearCookie("role");
-    res.json({ message: "Logged out successfully" });
-});
-
-
-router.get("/users", (req, res) => {
-    const userId = req.cookies.session_id;
-
-    if (!userId) {
-        return res.status(401).json({ message: "Not logged in" }); //make sure there is a session
-    }
-
-    const getUserSql = "SELECT role FROM user WHERE id = ?";
-    db.query(getUserSql, [userId], (err, userResult) => {      //make sure that the user and session is valid
-        if (err || userResult.length === 0) {
-            return res.status(403).json({ message: "Invalid user or session" });
+router.post("/logout", authMiddleware, (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ message: "Logout failed" });
         }
-
-        const role = userResult[0].role;
-
-        if (role !== "admin") {
-            return res.status(403).json({ message: "Authentication Failed" });  //make sure that the user is admin
-        }
-
-        const sql = "SELECT id, username, email, password, role, profilepicture FROM user";
-        db.query(sql, (err, results) => {                        //perform fetch user data
-            if (err) {
-                console.error("Error fetching users:", err);
-                return res.status(500).json({ message: "Failed to retrieve users" });
-            }
-            res.json(results);
-        });
+        res.clearCookie("session_id");
+        res.json({ message: "Logged out successfully" });
     });
 });
+
+
 
 export default router;

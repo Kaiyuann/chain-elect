@@ -6,7 +6,6 @@ interface User {
     username: string;
     email: string;
     profilepicture: string;
-    role: string;
 }
 
 function Profile() {
@@ -81,8 +80,7 @@ function Profile() {
                     <div className="w-50">
                         <h2>{user.username}</h2>
                         <p>{user.email}</p>
-                        <p>Role: {user.role}</p>
-                        <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
+                        <button className="btn btn-danger mt-3" onClick={handleLogout}>Logout</button>
                     </div>
 
                 </div>

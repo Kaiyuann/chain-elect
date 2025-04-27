@@ -12,6 +12,7 @@ function CreatePollModal() {
     const [emailInput, setEmailInput] = useState<string>("");
     const [isRestricted, setIsRestricted] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [validationError, setValidationError] = useState<string>("");
 
     const handleOptionChange = (index: number, value: string) => {
         const updated = [...options];
@@ -41,7 +42,45 @@ function CreatePollModal() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationError("");
+
+        if (!title.trim()) {
+            setValidationError("Poll title is required.");
+            return;
+        }
+
+        if (!endTime) {
+            setValidationError("End time is required.");
+            return;
+        }
+
+        const selectedEndTime = new Date(endTime);
+        const currentTime = new Date();
+        if (selectedEndTime <= currentTime) {
+            setValidationError("End time cannot be in the past.");
+            return;
+        }
+
+        if (options.filter(option => option.trim() !== "").length < 2) {
+            setValidationError("At least 2 vote options are required.");
+            return;
+        }
+
+        const trimmedOptions = options.map(opt => opt.trim().toLowerCase()).filter(opt => opt !== "");
+        const hasDuplicateOptions = new Set(trimmedOptions).size !== trimmedOptions.length;
+
+        if (hasDuplicateOptions) {
+            setValidationError("Poll options must not have duplicates.");
+            return;
+        }
+
+        if (isRestricted && whitelistEmails.length === 0) {
+            setValidationError("Please add at least one whitelisted email for restricted polls.");
+            return;
+        }
+
         setIsLoading(true);
+
 
         try {
             await axios.post("http://localhost:5000/api/polls", {
@@ -59,6 +98,7 @@ function CreatePollModal() {
             window.location.reload();
         } catch (err) {
             console.error("Failed to create poll:", err);
+            setValidationError("Failed to create poll. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -205,6 +245,11 @@ function CreatePollModal() {
                                             + Add Option
                                         </button>
                                     </div>
+                                    {validationError && (
+                                        <div className="alert alert-danger">
+                                            {validationError}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="modal-footer">

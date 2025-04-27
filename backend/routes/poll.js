@@ -3,10 +3,11 @@ import dotenv from "dotenv";
 dotenv.config();
 import mysql from "mysql2";
 import crypto from "crypto";
-import { keccak256, toUtf8Bytes } from "ethers"; 
+import { keccak256, toUtf8Bytes } from "ethers";
 import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import validator from "validator";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -81,6 +82,40 @@ router.post("/", authMiddleware, async (req, res) => {
 
     const insertPollSql = "INSERT INTO poll (title, description, endTime, creator_id, allow_live_results, is_restricted) VALUES (?, ?, ?, ?, ?, ?)";
     const values = [title, description, endTime, req.session.userId || 1, allowLiveResults ? 1 : 0, isRestricted ? 1 : 0];
+
+    if (!title || typeof title !== "string" || title.trim() === "") {
+        return res.status(400).json({ message: "Poll title is required." });
+    }
+
+    if (!endTime) {
+        return res.status(400).json({ message: "End time is required." });
+    }
+
+    const endDate = new Date(endTime);
+    if (isNaN(endDate.getTime()) || endDate <= new Date()) {
+        return res.status(400).json({ message: "End time must be a valid future date." });
+    }
+
+    if (!Array.isArray(options) || options.filter(opt => opt && opt.trim() !== "").length < 2) {
+        return res.status(400).json({ message: "At least 2 poll options are required." });
+    }
+
+    const trimmedOptions = options.map(opt => opt.trim().toLowerCase()).filter(opt => opt !== "");
+    const uniqueOptions = new Set(trimmedOptions);
+
+    if (uniqueOptions.size !== trimmedOptions.length) {
+        return res.status(400).json({ message: "Poll options must not contain duplicates." });
+    }
+
+    if (isRestricted) {
+        if (!Array.isArray(whitelistEmails) || whitelistEmails.length === 0) {
+            return res.status(400).json({ message: "At least one whitelisted email is required for restricted polls." });
+        }
+        const invalidEmails = whitelistEmails.filter(email => !validator.isEmail(email));
+        if (invalidEmails.length > 0) {
+            return res.status(400).json({ message: `Invalid email(s) detected: ${invalidEmails.join(", ")}` });
+        }
+    }
 
     db.query(insertPollSql, values, async (err, result) => {
         if (err) {

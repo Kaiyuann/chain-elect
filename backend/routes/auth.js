@@ -6,6 +6,8 @@ import multer from "multer";
 import { fileURLToPath } from "url";
 import path from "path";
 import rateLimit from "express-rate-limit";
+import validator from "validator";
+import bcrypt from "bcrypt";
 const router = express.Router();
 
 
@@ -49,12 +51,21 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
+const saltRounds = 10;
+
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,                   // Limit each IP to 5 login attempts
-    message: "Too many login attempts. Please try again later.",
-    standardHeaders: true,    // Return rate limit info in headers
+    windowMs: 5 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
     legacyHeaders: false,
+    message: (req, res) => {
+        const retryAfter = Math.ceil((req.rateLimit.resetTime - new Date()) / 1000);
+        res.status(429).json({
+            message: `Too many login attempts. Please try again after ${retryAfter} seconds.`,
+            retryAfterSeconds: retryAfter,
+            remainingAttempts: req.rateLimit.remaining
+        });
+    }
 });
 
 const authMiddleware = (req, res, next) => {
@@ -72,36 +83,84 @@ router.post("/register", async (req, res) => {
         return res.status(400).json({ message: "All fields are required." });
     }
 
-    const sql = `INSERT INTO user (username, email, password) VALUES (?,?,?)`;
+    if (!validator.isEmail(email)) {
+        return res.status(400).json({ message: "Invalid email format." });
+    }
 
-    db.query(sql, [username, email, password], (err, result) => {
-        if (err) {
-            console.error("Register error:", err);
-            return res.status(500).json({ message: "User registration failed." });
-        }
-        return res.status(201).json({ message: "Registration successful." });
-    });
+    if (
+        !validator.isStrongPassword(password, {
+            minLength: 8,
+            minLowercase: 1,
+            minUppercase: 1,
+            minNumbers: 1,
+            minSymbols: 1
+        })
+    ) {
+        return res.status(400).json({
+            message:
+                "Password must be at least 8 characters long and include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character."
+        });
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        const sql = `INSERT INTO user (username, email, password) VALUES (?, ?, ?)`;
+        db.query(sql, [username, email, hashedPassword], (err, result) => {
+            if (err) {
+                console.error("Register error:", err);
+                if (err.code === "ER_DUP_ENTRY") {
+                    return res.status(400).json({ message: "Email already registered." });
+                }
+                return res.status(500).json({ message: "User registration failed." });
+            }
+            return res.status(201).json({ message: "Registration successful." });
+        });
+    } catch (error) {
+        console.error("Hashing error:", error);
+        return res.status(500).json({ message: "Error processing registration." });
+    }
 });
 
 router.post("/login", loginLimiter, (req, res) => {
     const { email, password } = req.body;
 
-    const sql = "SELECT * FROM user WHERE email = ? AND password = ?";
+    if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required." });
+    }
 
-    db.query(sql, [email, password], (err, results) => {
+    if (!validator.isEmail(email)) {
+        return res.status(400).json({ message: "Invalid email format." });
+    }
+
+    const sql = "SELECT * FROM user WHERE email = ?";
+
+    db.query(sql, [email], async (err, results) => {
         if (err) {
             console.error("Login error:", err);
             return res.status(500).json({ message: "Login failed." });
         }
 
-        if (results.length > 0) {
-            const user = results[0];
+        if (results.length === 0) {
+            return res.status(401).json({ message: "Invalid credentials." });
+        }
 
-            req.session.userId = user.id
+        const user = results[0];
 
-            return res.json({ message: "Login successful", user });
-        } else {
-            return res.status(401).json({ message: "Invalid credentials" });
+        try {
+            const match = await bcrypt.compare(password, user.password);
+            if (match) {
+                req.session.userId = user.id;
+
+                const { password: _, ...userWithoutPassword } = user;
+
+                return res.json({ message: "Login successful", user: userWithoutPassword });
+            } else {
+                return res.status(401).json({ message: "Invalid credentials." });
+            }
+        } catch (compareErr) {
+            console.error("Error comparing passwords:", compareErr);
+            return res.status(500).json({ message: "Login failed." });
         }
     });
 });

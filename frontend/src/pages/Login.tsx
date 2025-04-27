@@ -1,20 +1,41 @@
 import { useEffect, useState } from "react";
-//import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios, { AxiosError } from "axios";
 
 function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [message, setMessage] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
-    //const navigate = useNavigate();
+    const navigate = useNavigate();
 
     useEffect(() => {
         document.title = "Login | ChainElect";
     }, []);
 
+    const validateInput = (): string | null => {
+        if (!email || !password) {
+            return "Email and password are required.";
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return "Invalid email format.";
+        }
+        return null;
+    };
+
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+        const validationError = validateInput();
+        if (validationError) {
+            setMessage(validationError);
+            return;
+        }
+
+        setIsLoading(true);
+
         try {
             await axios.post("http://localhost:5000/api/login", {
                 email,
@@ -27,6 +48,8 @@ function Login() {
         } catch (err) {
             const error = err as AxiosError<{ message: string }>;
             setMessage(error.response?.data?.message || "Login failed");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -46,11 +69,28 @@ function Login() {
                 </div>
 
 
-                <button type="submit" className="btn btn-primary mt-2">
-                    Login
-                </button>
+                <div className="mt-3">
+                    <button type="submit" className="btn btn-primary me-2">
+                        {isLoading ? (
+                            <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Logging in...
+                            </>
+                        ) : (
+                            "Login"
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => navigate("/home")}
+                        disabled={isLoading}
+                    >
+                        Back
+                    </button>
+                </div>
 
-                {message && <p>{message}</p>}
+                {message && <p className="mt-2">{message}</p>}
             </form>
         </div>
     );

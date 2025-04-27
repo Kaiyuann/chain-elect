@@ -49,7 +49,11 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 const saltRounds = 10;
 
@@ -185,21 +189,31 @@ router.get("/profile", authMiddleware, (req, res) => {
     });
 });
 
-router.post("/upload-profile", authMiddleware, upload.single("profile"), (req, res) => {
-    const sessionId = req.session.userId;
-    const newFileName = req.file.filename;
-
-    if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-    }
-
-    const sql = `UPDATE user SET profilepicture = ? WHERE id = ?`;
-    db.query(sql, [newFileName, sessionId], (err, result) => {
-        if (err) {
-            console.error("Error updating profile picture:", err);
-            return res.status(500).json({ message: "Update failed" });
+router.post("/upload-profile", authMiddleware, (req, res, next) => {
+    upload.single("profile")(req, res, (err) => {
+        if (err instanceof multer.MulterError || err) {
+            console.error("Multer error:", err.message);
+            if (err.code === "LIMIT_FILE_SIZE") {
+                return res.status(400).json({ message: "File too large. Maximum allowed size is 5MB." });
+            }
+            return res.status(400).json({ message: err.message });
         }
-        res.json({ message: "Profile picture updated" });
+
+        if (!req.file) {
+            return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        const sessionId = req.session.userId;
+        const newFileName = req.file.filename;
+
+        const sql = `UPDATE user SET profilepicture = ? WHERE id = ?`;
+        db.query(sql, [newFileName, sessionId], (dbErr, result) => {
+            if (dbErr) {
+                console.error("Error updating profile picture:", dbErr);
+                return res.status(500).json({ message: "Update failed" });
+            }
+            res.json({ message: "Profile picture updated" });
+        });
     });
 });
 

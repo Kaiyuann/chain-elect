@@ -243,7 +243,7 @@ router.post("/:id/request-token", authMiddleware, (req, res) => {
     const userId = req.session.userId;
 
     // Check if the poll is restricted
-    const checkPollSql = "SELECT is_restricted FROM poll WHERE id = ?";
+    const checkPollSql = "SELECT is_restricted, status FROM poll WHERE id = ?";
     db.query(checkPollSql, [pollId], (pollErr, pollResults) => {
         if (pollErr || pollResults.length === 0) {
             console.error("Poll check error:", pollErr);
@@ -251,6 +251,12 @@ router.post("/:id/request-token", authMiddleware, (req, res) => {
         }
 
         const isRestricted = pollResults[0].is_restricted;
+        const pollStatus = pollResults[0].status;
+
+       // Only allow token issuance if poll is open
+        if (pollStatus !== "open") {
+            return res.status(403).json({ message: "This poll is not open for voting." });
+        }
 
         // If poll is restricted, check whitelist
         if (isRestricted) {

@@ -11,6 +11,7 @@ const PROVIDER_URL = "http://localhost:8545";
 function VotePage() {
   const { id: pollId } = useParams();
   const [pollTitle, setPollTitle] = useState<string>("");
+  const [status, setStatus] = useState<string>("");
   const [token, setToken] = useState<string>("");
   const [showToken, setShowToken] = useState<boolean>(false);
   const [options, setOptions] = useState<{ id: number; label: string }[]>([]);
@@ -33,6 +34,7 @@ function VotePage() {
           withCredentials: true
         });
         setPollTitle(response.data.title);
+        setStatus(response.data.status);
         setOptions(response.data.options);
         setBlockchainPollId(response.data.blockchain_poll_id);
         document.title = "Vote in: " + response.data.title + " | ChainElect";
@@ -44,6 +46,17 @@ function VotePage() {
 
     fetchPollDetails();
   }, [pollId]);
+
+  if (status !== "open") {
+    return (
+      <div className="container mt-5 text-center">
+        <h2 className="mb-3">This poll is currently closed or not available for voting.</h2>
+        <button className="btn btn-secondary" onClick={() => navigate(`/poll/${pollId}`)}>
+          🡐 Back to Poll Details
+        </button>
+      </div>
+    );
+  }
 
   const handleRequestToken = async () => {
     try {

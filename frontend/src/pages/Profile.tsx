@@ -122,36 +122,36 @@ function Profile() {
         }
         `}
             </style>
-                <div className={(showModal ? "blurred-background " : "") + "position-absolute start-50 top-50 translate-middle"}>
-                    <div className="d-flex justify-content-center gap-4">
-                        <div className="profile-picture-container" onClick={() => setShowModal(true)}>
-                            <img
-                                src={`http://localhost:5000/uploads/${user.profilepicture || "default.jpg"}`}
-                                alt={user.username}
-                                className="rounded-circle"
-                                style={{ width: "150px", height: "150px", objectFit: "cover", cursor: "pointer" }}
-                            />
-                            <div className="profile-picture-overlay">
-                                <span>📸Change Photo</span>
-                            </div>
+            <div className={(showModal ? "blurred-background " : "") + "position-absolute start-50 top-50 translate-middle"}>
+                <div className="d-flex justify-content-center gap-4">
+                    <div className="profile-picture-container" onClick={() => setShowModal(true)}>
+                        <img
+                            src={`http://localhost:5000/uploads/${user.profilepicture || "default.jpg"}`}
+                            alt={user.username}
+                            className="rounded-circle"
+                            style={{ width: "150px", height: "150px", objectFit: "cover", cursor: "pointer" }}
+                        />
+                        <div className="profile-picture-overlay">
+                            <span>📸Change Photo</span>
                         </div>
-                        <div className="w-50">
-                            <h2>{user.username}</h2>
-                            <p>{user.email}</p>
-                            <button className="btn btn-danger mt-4" onClick={handleLogout}>
-                                {isLoggingOut ? (
-                                    <>
-                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                        Logging out...
-                                    </>
-                                ) : (
-                                    "Logout"
-                                )}
-                            </button>
-                        </div>
-
                     </div>
+                    <div className="w-50">
+                        <h2>{user.username}</h2>
+                        <p>{user.email}</p>
+                        <button className="btn btn-danger mt-4" onClick={handleLogout}>
+                            {isLoggingOut ? (
+                                <>
+                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    Logging out...
+                                </>
+                            ) : (
+                                "Logout"
+                            )}
+                        </button>
+                    </div>
+
                 </div>
+            </div>
             {showModal && (
                 <div className="modal fade show d-block" tabIndex={-1} role="dialog">
                     <div className="modal-dialog" role="document">

@@ -106,6 +106,19 @@ function CreatePollModal() {
 
     return (
         <>
+            <style>
+                {`
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1040;
+    }
+    `}
+            </style>
             <button
                 className="btn btn-primary ms-3"
                 onClick={() => setShow(true)}
@@ -114,168 +127,171 @@ function CreatePollModal() {
             </button>
 
             {show && (
-                <div className="modal show fade d-block" tabIndex={-1}>
-                    <div className="modal-dialog">
-                        <div className="modal-content">
+                <>
+                    <div className="modal-overlay" onClick={() => setShow(false)}></div>
+                    <div className="modal show fade d-block" tabIndex={-1}>
+                        <div className="modal-dialog">
+                            <div className="modal-content">
 
-                            <div className="modal-header">
-                                <h5 className="modal-title">Create New Poll</h5>
-                                <button
-                                    type="button"
-                                    className="btn-close"
-                                    onClick={() => setShow(false)}
-                                ></button>
-                            </div>
-
-                            <form onSubmit={handleSubmit}>
-                                <div className="modal-body">
-                                    <div className="mb-3">
-                                        <label className="form-label">Title</label>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="mb-3">
-                                        <label className="form-label">Description</label>
-                                        <textarea
-                                            className="form-control"
-                                            rows={3}
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                        ></textarea>
-                                    </div>
-
-                                    <div className="mb-3">
-                                        <label className="form-label">End Time</label>
-                                        <input
-                                            type="datetime-local"
-                                            className="form-control"
-                                            value={endTime}
-                                            onChange={(e) => setEndTime(e.target.value)}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="form-check mb-3">
-                                        <input
-                                            className="form-check-input"
-                                            type="checkbox"
-                                            id="liveResultsCheckbox"
-                                            checked={allowLiveResults}
-                                            onChange={(e) => setAllowLiveResults(e.target.checked)}
-                                        />
-                                        <label className="form-check-label" htmlFor="liveResultsCheckbox">
-                                            Allow Live Results Viewing
-                                        </label>
-                                    </div>
-
-                                    <div className="form-check mb-3">
-                                        <input
-                                            className="form-check-input"
-                                            type="checkbox"
-                                            id="restrictPollCheckbox"
-                                            checked={isRestricted}
-                                            onChange={(e) => setIsRestricted(e.target.checked)}
-                                        />
-                                        <label className="form-check-label" htmlFor="restrictPollCheckbox">
-                                            Restrict poll to specific email addresses
-                                        </label>
-                                    </div>
-
-                                    {isRestricted && (
-                                        <div className="mb-3">
-                                            <label className="form-label">Whitelist Emails</label>
-                                            <div className="d-flex flex-wrap">
-                                                {whitelistEmails.map((email, index) => (
-                                                    <span key={index} className="badge bg-primary me-2 mb-2">
-                                                        {email}
-                                                        <button
-                                                            type="button"
-                                                            className="btn-close btn-close-white btn-sm ms-2"
-                                                            onClick={() => handleRemoveEmail(index)}
-                                                        ></button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <input
-                                                type="email"
-                                                className="form-control"
-                                                placeholder="Type email and press Enter"
-                                                value={emailInput}
-                                                onChange={(e) => setEmailInput(e.target.value)}
-                                                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
-                                            />
-                                            <div className="form-text">Press Enter to add each email. Invalid emails will be ignored.</div>
-                                        </div>
-                                    )}
-
-
-                                    <div className="mb-3">
-                                        <label className="form-label">Vote Options</label>
-                                        {options.map((option, index) => (
-                                            <div key={index} className="input-group mb-2">
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    placeholder={`Option ${index + 1}`}
-                                                    value={option}
-                                                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                                                    required
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-outline-danger"
-                                                    onClick={() => removeOption(index)}
-                                                    disabled={options.length <= 1}
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        ))}
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-primary btn-sm"
-                                            onClick={addOption}
-                                        >
-                                            + Add Option
-                                        </button>
-                                    </div>
-                                    {validationError && (
-                                        <div className="alert alert-danger">
-                                            {validationError}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="modal-footer">
-                                    <button type="submit" className="btn btn-success" disabled={isLoading}>
-                                        {isLoading ? (
-                                            <>
-                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                                Creating...
-                                            </>
-                                        ) : (
-                                            "Submit"
-                                        )}
-                                    </button>
+                                <div className="modal-header">
+                                    <h5 className="modal-title">Create New Poll</h5>
                                     <button
                                         type="button"
-                                        className="btn btn-secondary"
+                                        className="btn-close"
                                         onClick={() => setShow(false)}
-                                    >
-                                        Cancel
-                                    </button>
+                                    ></button>
                                 </div>
-                            </form>
 
+                                <form onSubmit={handleSubmit}>
+                                    <div className="modal-body">
+                                        <div className="mb-3">
+                                            <label className="form-label">Title</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={title}
+                                                onChange={(e) => setTitle(e.target.value)}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="mb-3">
+                                            <label className="form-label">Description</label>
+                                            <textarea
+                                                className="form-control"
+                                                rows={3}
+                                                value={description}
+                                                onChange={(e) => setDescription(e.target.value)}
+                                            ></textarea>
+                                        </div>
+
+                                        <div className="mb-3">
+                                            <label className="form-label">End Time</label>
+                                            <input
+                                                type="datetime-local"
+                                                className="form-control"
+                                                value={endTime}
+                                                onChange={(e) => setEndTime(e.target.value)}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="form-check mb-3">
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                id="liveResultsCheckbox"
+                                                checked={allowLiveResults}
+                                                onChange={(e) => setAllowLiveResults(e.target.checked)}
+                                            />
+                                            <label className="form-check-label" htmlFor="liveResultsCheckbox">
+                                                Allow Live Results Viewing
+                                            </label>
+                                        </div>
+
+                                        <div className="form-check mb-3">
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                id="restrictPollCheckbox"
+                                                checked={isRestricted}
+                                                onChange={(e) => setIsRestricted(e.target.checked)}
+                                            />
+                                            <label className="form-check-label" htmlFor="restrictPollCheckbox">
+                                                Restrict poll to specific email addresses
+                                            </label>
+                                        </div>
+
+                                        {isRestricted && (
+                                            <div className="mb-3">
+                                                <label className="form-label">Whitelist Emails</label>
+                                                <div className="d-flex flex-wrap">
+                                                    {whitelistEmails.map((email, index) => (
+                                                        <span key={index} className="badge bg-primary me-2 mb-2">
+                                                            {email}
+                                                            <button
+                                                                type="button"
+                                                                className="btn-close btn-close-white btn-sm ms-2"
+                                                                onClick={() => handleRemoveEmail(index)}
+                                                            ></button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <input
+                                                    type="email"
+                                                    className="form-control"
+                                                    placeholder="Type email and press Enter"
+                                                    value={emailInput}
+                                                    onChange={(e) => setEmailInput(e.target.value)}
+                                                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
+                                                />
+                                                <div className="form-text">Press Enter to add each email. Invalid emails will be ignored.</div>
+                                            </div>
+                                        )}
+
+
+                                        <div className="mb-3">
+                                            <label className="form-label">Vote Options</label>
+                                            {options.map((option, index) => (
+                                                <div key={index} className="input-group mb-2">
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        placeholder={`Option ${index + 1}`}
+                                                        value={option}
+                                                        onChange={(e) => handleOptionChange(index, e.target.value)}
+                                                        required
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline-danger"
+                                                        onClick={() => removeOption(index)}
+                                                        disabled={options.length <= 1}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline-primary btn-sm"
+                                                onClick={addOption}
+                                            >
+                                                + Add Option
+                                            </button>
+                                        </div>
+                                        {validationError && (
+                                            <div className="alert alert-danger">
+                                                {validationError}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="modal-footer">
+                                        <button type="submit" className="btn btn-success" disabled={isLoading}>
+                                            {isLoading ? (
+                                                <>
+                                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                    Creating...
+                                                </>
+                                            ) : (
+                                                "Submit"
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            onClick={() => setShow(false)}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+
+                            </div>
                         </div>
                     </div>
-                </div>
+                </>
             )}
         </>
     );

@@ -83,7 +83,7 @@ function Login() {
                     <button
                         type="button"
                         className="btn btn-secondary"
-                        onClick={() => navigate("/home")}
+                        onClick={() => navigate("/")}
                         disabled={isLoading}
                     >
                         Back

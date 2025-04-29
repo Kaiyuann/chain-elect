@@ -68,7 +68,7 @@ const PollResultsChart: React.FC<PollResultsChartProps> = ({ options, results })
                 `}
             </style>
 
-            <div style={{ width: "400px", margin: "0 auto" }} className="mt-5 chart-fade-in">
+            <div style={{ width: "400px", maxWidth: "100%", margin: "0 auto" }} className="mt-5 chart-fade-in">
                 <h4 className="text-center">Live Voting Results</h4>
                 <Pie data={data} options={chartOptions} />
             </div>

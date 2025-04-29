@@ -99,27 +99,36 @@ function Home() {
 
             {user && user !== "loading" && (
                 <>
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                        <input
-                            type="text"
-                            className="form-control w-50"
-                            placeholder="Search polls..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <div className="form-check me-3">
-                            <input
-                                className="form-check-input"
-                                type="checkbox"
-                                checked={showMyPollsOnly}
-                                onChange={() => setShowMyPollsOnly(!showMyPollsOnly)}
-                                id="myPollsCheckbox"
-                            />
-                            <label className="form-check-label" htmlFor="myPollsCheckbox">
-                                Show My Polls Only
-                            </label>
+                    <div className="mb-4">
+                        <div className="row gx-2 gy-2">
+                            {/* Search bar: full width on small screens, 6 columns on medium+ */}
+                            <div className="col-12 col-md-6">
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Search polls..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Show My Polls + Create Poll button: split row on small, inline on md+ */}
+                            <div className="col-12 col-md-6 d-flex align-items-center justify-content-md-end gap-3">
+                                <div className="form-check m-0">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        checked={showMyPollsOnly}
+                                        onChange={() => setShowMyPollsOnly(!showMyPollsOnly)}
+                                        id="myPollsCheckbox"
+                                    />
+                                    <label className="form-check-label" htmlFor="myPollsCheckbox">
+                                        Show My Polls Only
+                                    </label>
+                                </div>
+                                <CreatePollModal />
+                            </div>
                         </div>
-                        <CreatePollModal />
                     </div>
 
                     <div className="row g-4">

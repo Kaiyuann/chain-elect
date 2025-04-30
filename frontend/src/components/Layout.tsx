@@ -11,7 +11,7 @@ function Layout() {
   useEffect(() => {
     axios
       .get("http://localhost:5000/api/profile", { withCredentials: true })
-      .then((res) => setIsLoggedIn(true))
+      .then(() => setIsLoggedIn(true))
       .catch(() => setIsLoggedIn(false)); // Not logged in
   }, []);
 

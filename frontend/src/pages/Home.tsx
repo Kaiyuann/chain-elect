@@ -37,7 +37,6 @@ function Home() {
             .get("http://localhost:5000/api/profile", { withCredentials: true })
             .then((res) => {
                 setUser(res.data);
-                console.log(user);
             })
             .catch((err) => {
                 if (err.response && err.response.status === 401) {
